@@ -9,7 +9,7 @@ from matplotlib.widgets import Slider
 
 
 
-def DFT(data):
+def DFT_1d(data):
     out = np.zeros_like(data,dtype=np.complex128)
     N = len(data)
 
@@ -18,13 +18,43 @@ def DFT(data):
 
     return out
 
-def IDFT(data):
+def IDFT_1d(data):
     out = np.zeros_like(data,dtype=np.complex128)
     N = len(data)
 
     for i in range(N):
         out[i] = np.sum(data*np.exp(1j * 2 * cmath.pi * (i/N) * np.arange(N)))
         out[i] /= N
+
+    return out
+
+
+def DFT_2d(data):
+    temp = np.zeros_like(data,dtype=np.complex128)
+    out = np.zeros_like(data,dtype=np.complex128)
+    N1, N2 = out.shape
+
+
+    for i in range(N1):
+        temp[i,:] = DFT_1d(data[i, :])
+    
+    for j in range(N2):
+        out[:,j] = DFT_1d(temp[:,j])
+
+    return out
+
+
+def IDFT_2d(data):
+    temp = np.zeros_like(data,dtype=np.complex128)
+    out = np.zeros_like(data,dtype=np.complex128)
+    N1, N2 = out.shape
+
+
+    for i in range(N1):
+        temp[i,:] = IDFT_1d(data[i, :])
+    
+    for j in range(N2):
+        out[:,j] = IDFT_1d(temp[:,j])
 
     return out
 
@@ -93,5 +123,14 @@ def test():
     update(None) 
     plt.show()
 
+def test_2d():
+    data = np.random.rand(10,10)
 
-test()
+    dft_data = DFT_2d(data)
+
+    inv_dft_data = IDFT_2d(dft_data)
+
+    print((data-inv_dft_data).sum())
+
+
+
