@@ -7,14 +7,18 @@ import numpy as np
 import math
 from wave_simulation.gaussian_wave import gaussian_wave_func_1d, gaussian_wave_func_2d, plot_wave_func_2d
 from fourier_transform import DFT_2d, IDFT_2d
+import matplotlib.pyplot as plt
 
 
 def initialize():
 
-    width = 10
-    N = 10
+    width = 3
+    N = 40
 
     dx = 2 * width / N
+
+    wall_i = 7 * N // 10
+
 
 
     X, Y = np.meshgrid(np.linspace(-width,width,N), np.linspace(-width,width,N))
@@ -23,25 +27,44 @@ def initialize():
     potential_map = np.zeros((N, N))
     # potential_map[3, :] = 1e10 #math.inf
     # potential_map[7, :] = 1e10 #math.inf
-    potential_map[:,3] = 1e10 #math.inf
-    potential_map[:,7] = 1e10 #math.inf
+    # potential_map[:,3] = 1e10 #math.inf
+    potential_map[:,wall_i] = 1e10 #math.inf
 
+    potential_map[N//2+4,wall_i] = 0 #math.inf
+    potential_map[N//2+3,wall_i] = 0 #math.inf
+    potential_map[N//2+2,wall_i] = 0 #math.inf
 
-
+    potential_map[N//2-2,wall_i] = 0 #math.inf
+    potential_map[N//2-3,wall_i] = 0 #math.inf
+    potential_map[N//2-4,wall_i] = 0 #math.inf
 
     # potential_map[30, 48] = 0
     # potential_map[30, 52] = 0
 
-    psi_0 = gaussian_wave_func_2d(X,Y, kx_0=0, ky_0=10, t=0)
+    psi_0 = gaussian_wave_func_2d(X,Y, kx_0=0, ky_0=0, t=0)
 
     plot_wave_func_2d(potential_map)
-    plot_wave_func_2d(psi_0)
 
-    for i in range(100):
+    prob = abs(psi_0)**2
+    
+    plt.ion()
 
-        psi_0 = evolve_full_step(psi_0,potential_map,0.1,dx)
-        if(i%10==0):
-            plot_wave_func_2d(psi_0)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    im = ax.imshow(prob, origin='lower', cmap='viridis')
+    cbar = fig.colorbar(im, ax=ax, label="probability density of wavefunction")
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_title("2D Wavefunction probability density")
+    plt.tight_layout()
+
+    for i in range(1000):
+
+        psi_0 = evolve_full_step(psi_0,potential_map,0.01,dx)
+
+        prob = np.abs(psi_0)**2
+        im.set_data(psi_0.real)
+        im.set_clim(vmin=prob.min(), vmax=prob.max())
+        plt.pause(0.01)
 
 
 
@@ -84,13 +107,13 @@ def step_kinetic(wave,step, dx):
 
 def evolve_full_step(wave,potential,dt,dx):
     wave = step_kinetic(wave,dt,dx)
-    print("Post k1 ", wave)
+    # print("Post k1 ", wave)
     wave = step_potential(wave,potential,dt)
-    print("Post pot1 ", wave)
+    # print("Post pot1 ", wave)
 
 
     wave = step_kinetic(wave,dt,dx)
-    print("Post k2 ", wave)
+    # print("Post k2 ", wave)
 
 
     return wave

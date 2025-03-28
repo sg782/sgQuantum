@@ -44,9 +44,9 @@ def plot_wave_func_2d(values):
     
     plt.figure(figsize=(6, 5))
     plt.imshow(prob, origin='lower', cmap='viridis')
-    plt.colorbar(label="Real part of wavefunction")
+    plt.colorbar(label="probability density of wavefunction")
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title("2D Wavefunction Real Part")
+    plt.title("2D Wavefunction probability density")
     plt.tight_layout()
     plt.show()
