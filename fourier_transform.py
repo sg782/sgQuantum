@@ -6,15 +6,63 @@ import matplotlib.pyplot as plt
 import cmath
 import math
 from matplotlib.widgets import Slider
+import datetime
 
 
+
+# 
+# The bulk of our optimizations
+# can be made here 
+#
+# MUST vectorize all DFT and IDFT functions
+#
+#
+
+
+def DFT_1d_old(data):
+    out = np.zeros_like(data,dtype=np.complex128)
+    N = len(data)
+
+
+    for i in range(N):
+        out[i] = np.sum(data * np.exp(-1j * 2 * cmath.pi * (i/N) * np.arange(N)))
+
+    return out
 
 def DFT_1d(data):
+
+    # start = datetime.datetime.now()
+    # end = datetime.datetime.now()
+    # print("Time elapsed inside: ", end-start)
+
+
+    out = np.zeros_like(data,dtype=np.complex128)
+    N = len(data)
+    out = np.sum(data * np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N),np.arange(N))/N),axis=1)
+    return out
+
+def batch_DFT_1d(data):
+    out = np.zeros_like(data,dtype=np.complex128)    
+    N1, N2 = out.shape
+    # for i in range(N1):
+    #     out[i] = DFT_1d(data[i])
+
+    # for i in range(N1):
+    #     out[i] = np.sum(data[i] * np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1),axis=1)
+
+    exponential = np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1) # shape = (N, N)
+    for i in range(N1):
+        out[i] = np.sum(data[i] * exponential,axis=1)
+
+    return out
+
+def IDFT_1d_old(data):
     out = np.zeros_like(data,dtype=np.complex128)
     N = len(data)
 
     for i in range(N):
-        out[i] = np.sum(data * np.exp(-1j * 2 * cmath.pi * (i/N) * np.arange(N)))
+        out[i] = np.sum(data*np.exp(1j * 2 * cmath.pi * (i/N) * np.arange(N)))
+        out[i] /= N
 
     return out
 
@@ -22,9 +70,18 @@ def IDFT_1d(data):
     out = np.zeros_like(data,dtype=np.complex128)
     N = len(data)
 
-    for i in range(N):
-        out[i] = np.sum(data*np.exp(1j * 2 * cmath.pi * (i/N) * np.arange(N)))
-        out[i] /= N
+    out = np.sum(data * np.exp(1j * 2 * cmath.pi * np.outer(np.arange(N),np.arange(N))/N),axis=1) / N
+    return out
+
+def batch_IDFT_1d(data):
+    out = np.zeros_like(data,dtype=np.complex128)    
+    N1, N2 = out.shape 
+
+    exponential = np.exp(1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1)
+    for i in range(N1):
+        out[i] = np.sum(data[i] * exponential,axis=1)
+
+    out /= N2
 
     return out
 
@@ -35,11 +92,23 @@ def DFT_2d(data):
     N1, N2 = out.shape
 
 
+
     for i in range(N1):
         temp[i,:] = DFT_1d(data[i, :])
+
     
     for j in range(N2):
         out[:,j] = DFT_1d(temp[:,j])
+
+
+    return out
+
+def batch_DFT_2d(data):
+    temp = np.zeros_like(data,dtype=np.complex128)
+    out = np.zeros_like(data,dtype=np.complex128)
+
+    temp = batch_DFT_1d(data)
+    out = batch_DFT_1d(temp.T).T
 
     return out
 
@@ -56,8 +125,16 @@ def IDFT_2d(data):
     for j in range(N2):
         out[:,j] = IDFT_1d(temp[:,j])
 
+
     return out
 
+def batch_IDFT_2d(data):
+    temp = np.zeros_like(data,dtype=np.complex128)
+    out = np.zeros_like(data,dtype=np.complex128)
+
+    temp = batch_IDFT_1d(data)
+    out = batch_IDFT_1d(temp.T).T
+    return out
 
 def test():
     # 
@@ -124,13 +201,26 @@ def test():
     plt.show()
 
 def test_2d():
-    data = np.random.rand(10,10)
+    data = np.random.rand(50,50)
 
-    dft_data = DFT_2d(data)
+    start = datetime.datetime.now()
+    dft_data = IDFT_2d(data)
+    end = datetime.datetime.now()
+    print("elapsed Normal : ", end-start)
 
-    inv_dft_data = IDFT_2d(dft_data)
+    start = datetime.datetime.now()
+    batch_dft_data = batch_IDFT_2d(data)
+    end = datetime.datetime.now()
+    print("elapsed Batch : ", end-start)
 
-    print((data-inv_dft_data).sum())
+    # print("DFT: ", dft_data)
+    # print("Batch DFT: ", batch_dft_data)
+
+    # print(dft_data - batch_dft_data)
+
+    # inv_dft_data = IDFT_2d(dft_data)
+
+    # print((data-inv_dft_data).sum())
 
 
-
+test_2d()

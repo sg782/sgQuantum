@@ -6,37 +6,47 @@
 import numpy as np
 import math
 from wave_simulation.gaussian_wave import gaussian_wave_func_1d, gaussian_wave_func_2d, plot_wave_func_2d
-from fourier_transform import DFT_2d, IDFT_2d
+from fourier_transform import DFT_2d, IDFT_2d, batch_DFT_2d, batch_IDFT_2d
 import matplotlib.pyplot as plt
+import datetime
 
+running = True
+
+
+def on_key(e):
+    global running
+    if(e.key=="escape"):
+        print("ESC pressed, stopping runtime")
+        running = False
 
 def initialize():
 
     width = 3
-    N = 40
+    N = 120
 
     dx = 2 * width / N
 
-    wall_i = 7 * N // 10
+    wall_i = 8 * N // 10
 
+    inf_potential = 1e100
 
 
     X, Y = np.meshgrid(np.linspace(-width,width,N), np.linspace(-width,width,N))
 
     # create wall of potential energy
     potential_map = np.zeros((N, N))
-    # potential_map[3, :] = 1e10 #math.inf
-    # potential_map[7, :] = 1e10 #math.inf
-    # potential_map[:,3] = 1e10 #math.inf
-    potential_map[:,wall_i] = 1e10 #math.inf
+    # potential_map[N-wall_i, :] = 1e100 #math.inf
+    # potential_map[wall_i, :] = 1e100 #math.inf
+    # potential_map[:,N-wall_i] = 1e100 #math.inf
+    # potential_map[:,wall_i] = 1e100 #math.inf
 
-    potential_map[N//2+4,wall_i] = 0 #math.inf
-    potential_map[N//2+3,wall_i] = 0 #math.inf
-    potential_map[N//2+2,wall_i] = 0 #math.inf
+    # potential_map[N//2+4,wall_i] = 0 #math.inf
+    # potential_map[N//2+3,wall_i] = 0 #math.inf
+    # potential_map[N//2+2,wall_i] = 0 #math.inf
 
-    potential_map[N//2-2,wall_i] = 0 #math.inf
-    potential_map[N//2-3,wall_i] = 0 #math.inf
-    potential_map[N//2-4,wall_i] = 0 #math.inf
+    # potential_map[N//2-2,wall_i] = 0 #math.inf
+    # potential_map[N//2-3,wall_i] = 0 #math.inf
+    # potential_map[N//2-4,wall_i] = 0 #math.inf
 
     # potential_map[30, 48] = 0
     # potential_map[30, 52] = 0
@@ -50,16 +60,21 @@ def initialize():
     plt.ion()
 
     fig, ax = plt.subplots(figsize=(6, 5))
-    im = ax.imshow(prob, origin='lower', cmap='viridis')
+    im = ax.imshow(psi_0.real, origin='lower', cmap='viridis')
     cbar = fig.colorbar(im, ax=ax, label="probability density of wavefunction")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_title("2D Wavefunction probability density")
     plt.tight_layout()
 
-    for i in range(1000):
+    fig.canvas.mpl_connect('key_press_event', on_key)
 
-        psi_0 = evolve_full_step(psi_0,potential_map,0.01,dx)
+
+    for i in range(1000):
+        if(not running): break
+
+        psi_0 = evolve_full_step(psi_0,potential_map,0.1,dx)
+
 
         prob = np.abs(psi_0)**2
         im.set_data(psi_0.real)
@@ -75,10 +90,13 @@ def step_potential(wave, potential, step):
     wave_out = operator * wave
     return wave_out
 
+
 def step_kinetic(wave,step, dx):
+
     N1, N2 = wave.shape
 
-    # can vectorize
+    checkerboard = (-1.) ** (np.indices(wave.shape).sum(axis=0))
+
     n1 = np.arange(N1)
     n2 = np.arange(N2)
 
@@ -87,36 +105,38 @@ def step_kinetic(wave,step, dx):
 
     k_squared = np.outer(kx**2,ky**2)
 
-    for i in range(N1):
-        for j in range(N2):
-            wave[i][j] *= (-1)**(i+j)
-    
-    wave_k = DFT_2d(wave)
+    wave *= checkerboard # for (-1)^m
+
+    wave_k = batch_DFT_2d(wave)
 
     coeff = np.exp((-1j*step/4)*k_squared)
 
     wave_k *= coeff
 
-    inv_wave = IDFT_2d(wave_k)
+    inv_wave = batch_IDFT_2d(wave_k)
 
-    for i in range(N1):
-        for j in range(N2):
-            inv_wave[i][j] *= (-1)**(i+j)
+    inv_wave *= checkerboard
 
     return inv_wave
 
 def evolve_full_step(wave,potential,dt,dx):
+
+    start = datetime.datetime.now()
     wave = step_kinetic(wave,dt,dx)
-    # print("Post k1 ", wave)
+
+    end = datetime.datetime.now()
+    print("Time elapsed: ", end-start)
+
+
     wave = step_potential(wave,potential,dt)
-    # print("Post pot1 ", wave)
 
 
     wave = step_kinetic(wave,dt,dx)
-    # print("Post k2 ", wave)
+
 
 
     return wave
+
 
 
 
