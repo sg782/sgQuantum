@@ -44,15 +44,29 @@ def DFT_1d(data):
 def batch_DFT_1d(data):
     out = np.zeros_like(data,dtype=np.complex128)    
     N1, N2 = out.shape
-    # for i in range(N1):
-    #     out[i] = DFT_1d(data[i])
-
-    # for i in range(N1):
-    #     out[i] = np.sum(data[i] * np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1),axis=1)
 
     exponential = np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1) # shape = (N, N)
-    for i in range(N1):
-        out[i] = np.sum(data[i] * exponential,axis=1)
+    tile_exp = np.tile(exponential, (N2,1,1))
+    # repeat_exp = np.repeat(exponential,N2, axis=1)
+
+    # print("shae: ", (data[0] * exponential).shape)
+
+    # for i in range(N1):
+    #     out[i] = np.sum(data[i] * exponential,axis=1)
+
+    # out_a = np.sum(data * tile_exp,axis=2)
+
+    # print("ONE RUN-=---------------------")
+    # print("Data: ", data)
+    # print("Exp: ", exponential)
+    # print("tiled: ", tile_exp)
+    # print("tiled: ", np.sum(tile_exp,axis=0))
+
+    # weird indexing for broadcasting
+    out = np.sum(tile_exp * data[:,np.newaxis,:],axis=2)
+    # print("repeat exp: ", repeat_exp)
+
+    
 
     return out
 
@@ -78,10 +92,11 @@ def batch_IDFT_1d(data):
     N1, N2 = out.shape 
 
     exponential = np.exp(1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1)
-    for i in range(N1):
-        out[i] = np.sum(data[i] * exponential,axis=1)
+    tile_exp = np.tile(exponential, (N2,1,1))
 
-    out /= N2
+    out = np.sum(tile_exp * data[:,np.newaxis,:],axis=2) / N2
+    # print("repeat exp: ", repeat_exp)
+
 
     return out
 
@@ -136,7 +151,7 @@ def batch_IDFT_2d(data):
     out = batch_IDFT_1d(temp.T).T
     return out
 
-def test():
+def plot():
     # 
     # Visualization with sliders thanks to the help of chatgpt (and myself of course)
     #
@@ -201,7 +216,7 @@ def test():
     plt.show()
 
 def test_2d():
-    data = np.random.rand(50,50)
+    data = np.random.rand(3,3)
 
     start = datetime.datetime.now()
     dft_data = IDFT_2d(data)
@@ -216,11 +231,11 @@ def test_2d():
     # print("DFT: ", dft_data)
     # print("Batch DFT: ", batch_dft_data)
 
-    # print(dft_data - batch_dft_data)
+    print(dft_data - batch_dft_data)
 
     # inv_dft_data = IDFT_2d(dft_data)
 
     # print((data-inv_dft_data).sum())
 
 
-test_2d()
+# test_2d()

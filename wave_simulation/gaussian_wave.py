@@ -50,3 +50,25 @@ def plot_wave_func_2d(values):
     plt.title("2D Wavefunction probability density")
     plt.tight_layout()
     plt.show()
+
+def plot_wave_func_3d(values):
+    fig = plt.figure(figsize=(10, 5))
+    ax = fig.add_subplot(111, projection='3d')
+
+    prob = np.abs(values)**2
+
+    width = 3
+    N = values.shape[0]
+
+    X, Y = np.meshgrid(np.linspace(-width,width,N), np.linspace(-width,width,N))
+
+    ax.plot(X, Y, prob, color='purple', linewidth=1)
+
+    # Set axis labels
+    ax.set_xlabel("x")
+    ax.set_ylabel("Real part")
+    ax.set_zlabel("Imag part")
+    ax.set_title("Wavefunction in 3D (Complex Plane)")
+
+    plt.tight_layout()
+    plt.show()
