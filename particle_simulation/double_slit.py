@@ -15,11 +15,20 @@ running = True
 def initialize():
 
     width = 3
-    N = 200
+    N = 20
 
     dx = 2 * width / N
 
-    wall_i = 8 * N // 10
+    wall_i = (8 * N) // 10
+
+    slit_1_start = int((3 * N) / 10)
+    slit_1_end = int((4 * N) / 10)
+    slit_2_start = int((6 * N) / 10)
+    slit_2_end = int((7 * N) / 10)
+
+    print(slit_1_start,slit_1_end,slit_2_start,slit_2_end)
+
+    print(slit_1_start)
 
     inf_potential = 1e300
 
@@ -28,38 +37,25 @@ def initialize():
 
     # create wall of potential energy
     potential_map = np.zeros((N, N))
-    potential_map[N-wall_i, :] = inf_potential #math.inf
-    potential_map[wall_i, :] = inf_potential #math.inf
-    potential_map[:,N-wall_i] = inf_potential #math.inf
-    potential_map[:,wall_i] = inf_potential #math.inf
 
-    #outer walls
-    potential_map[0,:] = inf_potential
-    potential_map[N-1,:] = inf_potential
-    potential_map[:,0] = inf_potential
-    potential_map[:,N-1] = inf_potential
+    for i in range(N-wall_i):
+        potential_map[N-i-1, :] = inf_potential #math.inf
+        potential_map[i, :] = inf_potential #math.inf
+        potential_map[:,i] = inf_potential #math.inf
 
-    potential_map[N//2+8,wall_i] = 0 
-    potential_map[N//2+7,wall_i] = 0 
-    potential_map[N//2+6,wall_i] = 0 
-    potential_map[N//2+5,wall_i] = 0 
-    potential_map[N//2+4,wall_i] = 0 
-    potential_map[N//2+3,wall_i] = 0 
+    potential_map[0:slit_1_start,wall_i] = inf_potential #math.inf
+    potential_map[0:slit_1_start,wall_i-1] = inf_potential #math.inf
+    potential_map[0:slit_1_start,wall_i-2] = inf_potential #math.inf
+        
+    potential_map[slit_1_end:slit_2_start,wall_i] = inf_potential #math.inf
+    potential_map[slit_1_end:slit_2_start,wall_i-1] = inf_potential #math.inf
+    potential_map[slit_1_end:slit_2_start,wall_i-2] = inf_potential #math.inf
 
-    potential_map[N//2-3,wall_i] = 0 
-    potential_map[N//2-4,wall_i] = 0 
-    potential_map[N//2-5,wall_i] = 0 
-    potential_map[N//2-6,wall_i] = 0 
-    potential_map[N//2-7,wall_i] = 0 
-    potential_map[N//2-8,wall_i] = 0 
+    potential_map[slit_2_end:N-1,wall_i] = inf_potential #math.inf
+    potential_map[slit_2_end:N-1,wall_i-1] = inf_potential #math.inf
+    potential_map[slit_2_end:N-1,wall_i-2] = inf_potential #math.inf
 
-
-    potential_map[0,:] = inf_potential
-
-    # potential_map[30, 48] = 0
-    # potential_map[30, 52] = 0
-
-    psi_0 = gaussian_wave_func_2d(X,Y, kx_0=10, ky_0=0, t=0)
+    psi_0 = gaussian_wave_func_2d(X,Y, kx_0=10, ky_0=0, t=0, a=0.2)
 
     plot_wave_func_2d(potential_map)
 
@@ -92,10 +88,10 @@ def initialize():
     for i in range(10000):
         if(not running): break
 
-        psi_0 = evolve_full_step(psi_0,potential_map,0.0001,dx)
+        psi_0 = evolve_full_step(psi_0,potential_map,0.001,dx)
 
-        if(i%10==0):
-            # if(not showing_3d):
+        if(i%1==0):
+            # if(not showing_3d):+6
             prob = np.abs(psi_0)**2
             im1.set_data(prob)
             im1.set_clim(vmin=prob.min(), vmax=prob.max())
@@ -115,9 +111,6 @@ def step_potential(wave, potential, step):
 
 def step_kinetic(wave,step, dx):
     
-    start = datetime.datetime.now()
-    
-
     N1, N2 = wave.shape
 
     checkerboard = (-1.) ** (np.indices(wave.shape).sum(axis=0))
@@ -125,51 +118,35 @@ def step_kinetic(wave,step, dx):
     n1 = np.arange(N1)
     n2 = np.arange(N2)
 
+    # kx = - math.pi / dx + (2 * math.pi * n1) / (dx * N1)
+    # ky = - math.pi / dx + (2 * math.pi * n2) / (dx * N2)
+
+    # # k_squared = np.outer(kx**2,ky**2)
+    # k_squared = (kx**2) + (ky**2)
+
+    
     kx = - math.pi / dx + (2 * math.pi * n1) / (dx * N1)
     ky = - math.pi / dx + (2 * math.pi * n2) / (dx * N2)
-
-    k_squared = np.outer(kx**2,ky**2)
+    KX, KY = np.meshgrid(kx, ky, indexing='ij')
+    k_squared = KX**2 + KY**2
 
     wave *= checkerboard # for (-1)^m
 
-
-
-
     wave_k = batch_DFT_2d(wave)
-
-    end = datetime.datetime.now()
-    # print("Small section: ", end-start)
 
     coeff = np.exp((-1j*step/4)*k_squared)
 
     wave_k *= coeff
 
-    inv_wave = batch_IDFT_2d(wave_k)
-
-    inv_wave *= checkerboard
+    inv_wave = batch_IDFT_2d(wave_k) * checkerboard
 
     return inv_wave
 
 def evolve_full_step(wave,potential,dt,dx):
-
-    start = datetime.datetime.now()
     wave = step_kinetic(wave,dt,dx)
-
-    end = datetime.datetime.now()
-    print("Time elapsed kinetic 1: ", end-start)
-
-
     wave = step_potential(wave,potential,dt)
-
     wave = step_kinetic(wave,dt,dx)
-
-
 
     return wave
-
-
-
-
-
 
 initialize()

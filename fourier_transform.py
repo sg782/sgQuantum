@@ -46,7 +46,7 @@ def batch_DFT_1d(data):
     N1, N2 = out.shape
 
     exponential = np.exp(-1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1) # shape = (N, N)
-    tile_exp = np.tile(exponential, (N2,1,1))
+    # tile_exp = np.tile(exponential, (N2,1,1))
     # repeat_exp = np.repeat(exponential,N2, axis=1)
 
     # print("shae: ", (data[0] * exponential).shape)
@@ -63,7 +63,7 @@ def batch_DFT_1d(data):
     # print("tiled: ", np.sum(tile_exp,axis=0))
 
     # weird indexing for broadcasting
-    out = np.sum(tile_exp * data[:,np.newaxis,:],axis=2)
+    out = np.sum(exponential * data[:,np.newaxis,:],axis=2)
     # print("repeat exp: ", repeat_exp)
 
     
@@ -92,11 +92,8 @@ def batch_IDFT_1d(data):
     N1, N2 = out.shape 
 
     exponential = np.exp(1j * 2 * cmath.pi * np.outer(np.arange(N1),np.arange(N1))/N1)
-    tile_exp = np.tile(exponential, (N2,1,1))
 
-    out = np.sum(tile_exp * data[:,np.newaxis,:],axis=2) / N2
-    # print("repeat exp: ", repeat_exp)
-
+    out = np.sum(exponential * data[:,np.newaxis,:],axis=2) / N2
 
     return out
 
@@ -106,12 +103,9 @@ def DFT_2d(data):
     out = np.zeros_like(data,dtype=np.complex128)
     N1, N2 = out.shape
 
-
-
     for i in range(N1):
         temp[i,:] = DFT_1d(data[i, :])
 
-    
     for j in range(N2):
         out[:,j] = DFT_1d(temp[:,j])
 
@@ -216,26 +210,22 @@ def plot():
     plt.show()
 
 def test_2d():
-    data = np.random.rand(3,3)
+    N = 300
+    data = np.random.rand(N,N)
 
     start = datetime.datetime.now()
-    dft_data = IDFT_2d(data)
+    dft_data = DFT_2d(data)
     end = datetime.datetime.now()
     print("elapsed Normal : ", end-start)
 
     start = datetime.datetime.now()
-    batch_dft_data = batch_IDFT_2d(data)
+    batch_dft_data = batch_DFT_2d(data)
     end = datetime.datetime.now()
     print("elapsed Batch : ", end-start)
 
     # print("DFT: ", dft_data)
     # print("Batch DFT: ", batch_dft_data)
 
-    print(dft_data - batch_dft_data)
-
-    # inv_dft_data = IDFT_2d(dft_data)
-
-    # print((data-inv_dft_data).sum())
-
+    # print(dft_data - batch_dft_data)
 
 # test_2d()
